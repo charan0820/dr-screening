@@ -1,0 +1,12 @@
+numpy
+pandas
+opencv-python
+scikit-learn
+scikit-image
+albumentations
+tensorflow>=2.15
+streamlit
+matplotlib
+seaborn
+Pillow
+tqdm
