@@ -9,12 +9,13 @@ Run with dummy stub data:
     python main.py --dummy
 """
 import argparse
+import os
 import numpy as np
 
 from src.data_pipeline import load_image
 from src.quality import compute_quality_score, get_recapture_message
 from src.enhancement import enhance_image
-from src.model import load_trained_model
+from src.model import load_trained_model  # noqa: F401 (used in main())
 from src.train import predict
 from src.gradcam import generate_gradcam
 from src.uncertainty import mc_dropout_predict
@@ -73,9 +74,16 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dummy", action="store_true", help="Run with a fake random image")
     parser.add_argument("--image", type=str, help="Path to a real fundus image")
+    parser.add_argument("--checkpoint", type=str, default="models/best_checkpoint.keras",
+                         help="Path to a trained model checkpoint (Day 3+)")
     args = parser.parse_args()
 
-    model = None  # TODO(P1/P4): load_trained_model(checkpoint_path) once training exists
+    model = None
+    if os.path.exists(args.checkpoint):
+        print(f"Loading trained checkpoint: {args.checkpoint}")
+        model = load_trained_model(args.checkpoint)
+    else:
+        print(f"No checkpoint found at {args.checkpoint} — using placeholder predictions.")
 
     if args.image:
         image = load_image(args.image)
