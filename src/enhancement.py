@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 Owner: P3
 Adaptive enhancement — selects a method based on the diagnosed quality issue.
