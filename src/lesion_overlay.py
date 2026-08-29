@@ -57,3 +57,26 @@ def detect_lesions(image: np.ndarray) -> dict:
         "exudate_count": len(bright_blobs),
         "overlay_image": overlay,
     }
+
+
+def combine_evidence(
+    original: np.ndarray,
+    gradcam_image: np.ndarray,
+    lesion_overlay_image: np.ndarray,
+) -> np.ndarray:
+    """
+    Combines original, Grad-CAM, and lesion overlay images
+    side by side into one evidence image.
+
+    All inputs are expected to be RGB uint8 images.
+    """
+
+    h = original.shape[0]
+
+    resized = [
+        cv2.resize(img, (h, h))
+        for img in (original, gradcam_image, lesion_overlay_image)
+    ]
+    combined = np.hstack(resized)
+
+    return combined
