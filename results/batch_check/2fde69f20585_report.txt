@@ -1,0 +1,25 @@
+AI-ASSISTED SCREENING OUTPUT
+OPHTHALMOLOGIST CONFIRMATION REQUIRED
+
+IMAGE QUALITY
+  Score: 68.9/100
+  Status: borderline
+
+DIABETIC RETINOPATHY
+  DR Grade: 4
+  Referable DR: Yes
+
+UNCERTAINTY
+  Level: medium
+
+LESION EVIDENCE
+  Microaneurysm candidates: 13
+  Hemorrhage candidates: 6
+  Exudate candidates: 6
+
+RECOMMENDATION
+  REVIEW
+
+This is a screening/referral-support prototype, not an
+autonomous diagnostic device. Results require confirmation
+by a qualified ophthalmologist.
