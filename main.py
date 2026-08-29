@@ -19,7 +19,7 @@ from src.model import load_trained_model  # noqa: F401 (used in main())
 from src.train import predict
 from src.gradcam import generate_gradcam
 from src.uncertainty import mc_dropout_predict
-from src.lesion_overlay import detect_lesions
+from src.lesion_overlay import detect_lesions, combine_evidence
 from src.report_generator import generate_report
 
 
@@ -62,6 +62,14 @@ def run_pipeline(image: np.ndarray, model=None) -> dict:
         "lesions": lesions,
         "recommendation": recommendation,
     }
+    # Day 5: combined side-by-side evidence image (original + Grad-CAM + lesion
+    # overlay), per spec Section 23. Skipped for the ungradable path since
+    # there's no meaningful Grad-CAM/lesion evidence to show for it.
+    if quality["status"] != "ungradable":
+        output["evidence_image"] = combine_evidence(enhanced, gradcam_img, lesions["overlay_image"])
+    else:
+        output["evidence_image"] = image
+
     output["report"] = generate_report(output)
 
     if quality["status"] == "ungradable":
