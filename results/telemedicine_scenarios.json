@@ -1,0 +1,30 @@
+[
+  {
+    "patients_per_day": 100,
+    "cases_needing_review": 22.5,
+    "ophthalmologist_utilization": 0.023,
+    "max_reviewable_cases_per_day": 960.0,
+    "bottlenecked": false
+  },
+  {
+    "patients_per_day": 500,
+    "cases_needing_review": 112.5,
+    "ophthalmologist_utilization": 0.117,
+    "max_reviewable_cases_per_day": 960.0,
+    "bottlenecked": false
+  },
+  {
+    "patients_per_day": 1000,
+    "cases_needing_review": 225.0,
+    "ophthalmologist_utilization": 0.234,
+    "max_reviewable_cases_per_day": 960.0,
+    "bottlenecked": false
+  },
+  {
+    "patients_per_day": 274,
+    "cases_needing_review": 61.6,
+    "ophthalmologist_utilization": 0.064,
+    "max_reviewable_cases_per_day": 960.0,
+    "bottlenecked": false
+  }
+]
