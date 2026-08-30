@@ -12,6 +12,7 @@ Fonts: Orbitron (headings), Abel (subheadings), Cardo (body)
 """
 import sys
 import os
+import time
 import numpy as np
 import streamlit as st
 from PIL import Image
@@ -52,6 +53,13 @@ st.caption("AI-assisted screening/referral support — not an autonomous diagnos
 uploaded_file = st.file_uploader("Upload a fundus image", type=["png", "jpg", "jpeg"])
 
 if uploaded_file is not None:
+    # Day 5: review-time measurement, per spec Section 26 target (<30s/case).
+    # Timer starts the moment a new image is uploaded.
+    if st.session_state.get("current_file_id") != uploaded_file.file_id:
+        st.session_state["current_file_id"] = uploaded_file.file_id
+        st.session_state["review_start_time"] = time.time()
+        st.session_state["decision_made"] = None
+
     image = np.array(Image.open(uploaded_file).convert("RGB"))
     result = run_pipeline(image)
 
@@ -65,6 +73,10 @@ if uploaded_file is not None:
     with col3:
         st.subheader("Grad-CAM")
         st.image(result["gradcam"], use_column_width=True)
+
+    st.subheader("Combined Evidence")
+    st.image(result["evidence_image"], use_column_width=True,
+              caption="Original | Grad-CAM | Lesion overlay (heuristic, not clinically validated)")
 
     st.subheader("Prediction")
     pred = result["prediction"]
@@ -90,7 +102,31 @@ if uploaded_file is not None:
     with st.expander("Full report"):
         st.text(result["report"])
 
-    # TODO(P6): wire in Accept / Modify / Ungradable / Recapture / Refer / Save
-    # action buttons here once the review-time study is in scope (Day 5+).
+    # Day 5: human-in-the-loop action buttons (spec Section 26). These are
+    # UI-only for the hackathon scope — no backend persistence — but they
+    # do stop the review-time timer, which is the actual research metric
+    # (<30s/case target) worth measuring even without full case storage.
+    st.subheader("Ophthalmologist Review")
+    b1, b2, b3, b4, b5, b6 = st.columns(6)
+    decision_buttons = {
+        "Accept AI result": b1,
+        "Modify DR grade": b2,
+        "Mark ungradable": b3,
+        "Request recapture": b4,
+        "Refer": b5,
+        "Save report": b6,
+    }
+    for label, col in decision_buttons.items():
+        if col.button(label, key=label):
+            st.session_state["decision_made"] = label
+
+    if st.session_state.get("decision_made"):
+        elapsed = time.time() - st.session_state["review_start_time"]
+        st.success(f"Decision recorded: **{st.session_state['decision_made']}** "
+                   f"(review time: {elapsed:.1f}s)")
+        if elapsed > 30:
+            st.caption("Note: this exceeds the <30s/case research target — "
+                       "fine during testing, worth tracking in the real review-time study.")
 else:
     st.info("Upload a fundus image to begin.")
+    st.session_state.pop("current_file_id", None)
