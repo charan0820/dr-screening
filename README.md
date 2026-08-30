@@ -56,11 +56,38 @@ placeholder values that match the agreed shapes in `CONTRACTS.md`.
   `app/streamlit_app.py` directly — everyone else exposes functions, they don't
   touch the integration files.
 
-## Full 6-Day Plan
+## Day 6 Goal
 
-1. **Setup & contracts** — env, data download, stub pipeline runs end-to-end
-2. **Preprocessing & skeletons** — augmentation, quality scoring, model skeleton, Grad-CAM scaffold, GUI shell
-3. **Enhancement & training start** — CLAHE + recapture logic, kick off real training
-4. **Classification + explainability** — finish training, real Grad-CAM + uncertainty, GUI wiring
-5. **Integration + report + capacity sim** — full pipeline in `main.py` and GUI, ablation comparison, telemedicine capacity sim
-6. **Testing & demo prep** — bug bash, freeze, rehearse pitch
+Bug bash, freeze, and demo rehearsal — no new features today. Run
+`python scripts/health_check.py` and fix everything it flags before
+touching the pitch deck.
+
+## Known Limitations (state these honestly to judges — don't oversell)
+
+- Trained on a small stratified subsample (~1,000 images), not the full
+  APTOS set — absolute accuracy numbers will be modest; the QWK-based
+  ablation comparison is the more meaningful result to lead with.
+- Image-level train/val/test split, not patient-level (APTOS provides no
+  patient ID field) — a known, disclosed limitation, not an oversight.
+- Lesion overlay (`src/lesion_overlay.py`) is a classical heuristic for
+  visual/demo purposes, not a validated microaneurysm/hemorrhage detector.
+- The telemedicine capacity model (`scripts/telemedicine_simulation.py`)
+  is a simplified deterministic calculation, not a full discrete-event
+  queueing simulation with arrival-time variance.
+- This is a screening/referral-support prototype, not an autonomous
+  diagnostic device, and has not undergone clinical validation.
+
+## Day 6 Checklist
+
+- [ ] `python scripts/health_check.py` exits 0 (all checks pass)
+- [ ] Real checkpoint exists at `models/best_checkpoint.keras`
+- [ ] Real subsample exists at `data/train_subsample.csv` + `data/train_images/`
+- [ ] `streamlit run app/streamlit_app.py` tested live, at least twice, by
+      two different people (catches "works on my machine" issues)
+- [ ] `scripts/batch_sanity_check.py` re-run with the final checkpoint —
+      keep its output in `results/batch_check/` as an offline demo fallback
+      in case live inference or venue wifi is unreliable
+- [ ] Confusion matrix, ablation results, and telemedicine chart all
+      regenerated with the FINAL checkpoint (not an early/stale one)
+- [ ] Pitch rehearsed at least once end-to-end, timed
+

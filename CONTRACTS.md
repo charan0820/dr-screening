@@ -153,6 +153,7 @@ def run_pipeline(image: np.ndarray) -> dict:
         'uncertainty': {...},          # from uncertainty.mc_dropout_predict
         'gradcam': np.ndarray,         # from gradcam.generate_gradcam
         'lesions': {...},              # from lesion_overlay.detect_lesions
+        'evidence_image': np.ndarray,  # from lesion_overlay.combine_evidence (Day 5)
         'report': str,                 # from report_generator.generate_report
         'recommendation': str          # 'routine' | 'review' | 'recapture'
     }
