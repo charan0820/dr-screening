@@ -1,0 +1,277 @@
+The core functionality of this project is already working correctly.
+
+This project is a Diabetic Retinopathy Screening system designed for use in rural India, particularly in Primary Health Centres (PHCs).
+
+IMPORTANT:
+Do NOT modify or refactor:
+- the machine learning model
+- EfficientNet-B0
+- model inference
+- DR classification logic
+- dataset loading
+- image preprocessing logic
+- image enhancement algorithms
+- Grad-CAM implementation
+- confidence/uncertainty calculations
+- clinical recommendation logic
+- backend functionality
+- Git configuration
+- file paths related to the dataset
+
+The dataset is intentionally NOT stored in Git. Do not try to add, download, replace, generate, or restructure the dataset.
+
+ONLY redesign and improve the UI/UX and add the email functionality. 
+
+PROJECT PURPOSE:
+The application screens retinal fundus images for diabetic retinopathy and should be usable by healthcare workers in rural Indian PHCs.
+
+CURRENT WORKFLOW:
+Upload retinal image
+→ Image quality assessment
+→ Image enhancement
+→ DR classification
+→ Confidence score
+→ Grad-CAM visualization
+→ Clinical recommendation
+
+UI DESIGN GOAL:
+Create a polished, professional, clinical interface that is simple enough for a rural healthcare worker to use with minimal training.
+
+The UI should NOT look like a generic AI/ML student dashboard.
+
+DESIGN REQUIREMENTS:
+
+1. HOME / SCREENING PAGE
+
+Create a clear header such as:
+
+-layout label : "Product name"
+"OCULUS AI - Diabetic Retinopathy Screening" 
+Subtitle:
+"AI-assisted retinal screening for early detection and referral"
+
+-layout label : "image input"
+Include a prominent retinal image upload area.
+
+Make the upload process extremely obvious:
+- Upload retinal image
+- Show selected image preview
+- Clear "Analyze Image" button
+- Loading/progress state during analysis
+- Include a small hovering animation for the text displayed while processing. Also use "buffering_eye.avif" as a buffer icon, make it rotate.
+
+2. PATIENT / SCREENING INFORMATION
+
+If the existing application already collects patient information, present it cleanly.
+
+Use simple fields such as: (Use placeholder values for these)
+- Patient ID
+- Age
+- Screening date
+- Eye: Left / Right
+
+Do NOT add unnecessary medical fields.
+
+3. IMAGE QUALITY SECTION
+
+After analysis, clearly display:
+- Image quality score
+- Enhanced retinal image
+
+If the image quality is insufficient, make the UI clearly recommend:
+"Recapture Image" and give the proper reason as mentioned in code.
+
+Do not change the existing quality-scoring logic.
+
+4. DR RESULT
+
+Make the primary result extremely prominent.
+
+Display:
+- DR Grade
+- Risk category
+
+Use the existing 5-class DR classification.
+
+For example:
+
+Grade 0 — No DR
+Grade 1 — Mild
+Grade 2 — Moderate
+Grade 3 — Severe
+Grade 4 — Proliferative
+
+The exact prediction must come from the existing model.
+
+Use intuitive risk indicators, but do not change the underlying classification.
+
+5. REFERABLE DR
+
+Clearly indicate whether the case requires further clinical review.
+
+For the existing system:
+- Levels 0–1 → lower risk
+- Levels 2–4 → referable / requires review
+
+Use highly visible banners such as:
+
+"ROUTINE SCREENING"
+
+or
+
+"CLINICAL REVIEW RECOMMENDED"
+
+or
+
+"IMAGE RECAPTURE REQUIRED"
+
+Make these recommendations visually distinct.
+
+6. AI EXPLAINABILITY
+
+Create a dedicated "Why did the AI make this prediction?" section.
+
+Display the existing Grad-CAM visualization alongside the original/enhanced retinal image.
+
+Use simple explanatory text such as:
+
+"Highlighted regions indicate areas that contributed to the AI prediction."
+
+Do not modify the Grad-CAM implementation.
+
+7. CLINICAL RECOMMENDATION
+
+Display the existing rule-based recommendation in a large, easy-to-read card.
+
+Examples of UI states:
+
+ROUTINE
+No immediate referral indicated. Continue routine screening.
+
+REVIEW
+Clinical examination/referral recommended.
+
+RECAPTURE
+Image quality is insufficient. Capture another retinal image.
+
+Do NOT modify the recommendation logic.
+
+9. RESULTS SUMMARY
+
+At the end of the analysis, provide a clean summary card containing:
+
+Patient ID
+Image Quality
+DR Grade
+Risk Level
+Referral Recommendation
+The original image
+Enhanced image
+GRAD-CAM
+Lesion overlay
+
+Add a "Download / Generate Report" button only if report-generation functionality already exists. Automatically send it to receiver_mail obtained from log-in.
+
+10. RURAL INDIA / PHC DESIGN
+
+The interface should work well in environments where:
+- users may have limited technical training
+- screens may be smaller
+- internet connectivity may be unreliable
+- the user needs to make decisions quickly
+
+Therefore:
+- use large buttons
+- use clear labels
+- avoid excessive animations
+- avoid clutter
+- avoid unnecessary charts
+- use strong visual hierarchy
+- keep important results above the fold
+- make error messages understandable
+- provide clear instructions
+
+11. VISUAL STYLE
+Refer to layout-webpage.png for the layout.
+Colour scheme refer to colour_palette.png. Make it a 60-30-10 split.
+
+Navbar
+-Left : Product name
+-Right : 
+-- Menu drop-down containing "About us", "Explore our model", "Our codebase", "References".
+--Email
+
+Background:
+-bg_eye:
+--Rotate through bg_eye1, bg_eye2, buffering_eye periodically. Set them to a lower opacity. Remove background and use only the eye.
+-list of changing text:
+--include rotating placeholder texts of eye facts, retinopathy facts, etc.
+
+Image input as per layout.
+
+Use a professional healthcare aesthetic.
+
+The interface should feel:
+- trustworthy
+- clean
+- calm
+- accessible
+- modern
+- clinical
+
+Use cards, whitespace, clear typography, icons where appropriate, and consistent spacing.
+
+Avoid:
+- flashy gradients
+- excessive animations
+- gaming-style UI
+- unnecessary 3D elements
+- excessive technical jargon
+
+12. RESPONSIVENESS
+
+Make the UI responsive and usable on:
+- desktop
+- laptop
+- tablet
+- mobile phone
+
+13. ERROR / LOADING STATES
+
+Add polished UI states for:
+- no image uploaded
+- invalid image
+- poor-quality image
+- model processing
+- successful prediction
+- processing failure
+
+Do not alter the underlying error-handling logic.
+
+14. FUNCTIONALITIES OF UI COMPONENTS:
+1. Email:
+- Accept an email-id as input. When a successful report has been generated, send report file to that email.
+2. dropdown-items:
+- When clicked show placeholder content about each item.
+3. List of changing text:
+- Periodically cycle through different facts.
+
+15. IMPORTANT IMPLEMENTATION RULE
+
+Before editing, inspect the existing project and identify exactly which files control the UI.
+
+Only modify UI/frontend-related files wherever possible.
+
+Do not rewrite working backend/model code simply to make the UI easier to modify.
+
+After implementation, verify that the existing end-to-end workflow still works:
+
+Upload
+→ Quality assessment
+→ Enhancement
+→ Prediction
+→ Confidence
+→ Grad-CAM
+→ Recommendation
+
+The goal is to make the EXISTING application look like a polished healthcare product while preserving its functionality exactly.
