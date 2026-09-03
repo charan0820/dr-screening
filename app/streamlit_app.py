@@ -7,14 +7,14 @@ recommendations. This module owns the presentation layer and report delivery.
 """
 import base64
 import html
+import json
 import os
 import re
-import smtplib
 import sys
+import subprocess
 import time
 import urllib.parse
 from datetime import date
-from email.message import EmailMessage
 from io import BytesIO
 
 import numpy as np
@@ -650,51 +650,54 @@ def _send_pdf_email(
     image_name: str,
 ) -> tuple[bool | None, str]:
     """
-    Send through SMTP when configured.
+    Send through the connected Resend integration.
 
-    SMTP values are read only by the running app. If no mail service is
-    configured, return a clear fallback state instead of pretending delivery
-    happened.
+    The Node bridge uses the Replit Connectors SDK, which injects the
+    connected credential server-side. The PDF is supplied only on stdin and
+    never written to disk.
     """
     recipient = recipient.strip()
     if not _is_valid_email(recipient):
         return False, "Enter a valid recipient email address."
 
-    host = os.getenv("SMTP_HOST", "").strip()
-    if not host:
-        return None, "Email service is not configured. Download the PDF and use the email client link below."
+    sender = os.getenv("RESEND_FROM_EMAIL", "").strip()
+    if not sender:
+        return None, "Email delivery needs a verified RESEND_FROM_EMAIL sender address."
+
+    payload = {
+        "from": sender,
+        "to": recipient,
+        "subject": f"OCULUS AI screening report — {patient_id or image_name}",
+        "text": (
+            "Attached is the OCULUS AI diabetic retinopathy screening report.\n\n"
+            "This screening output requires ophthalmologist confirmation."
+        ),
+        "filename": "oculus-ai-screening-report.pdf",
+        "pdf_base64": base64.b64encode(pdf_bytes).decode("ascii"),
+    }
+    bridge = os.path.join(PROJECT_ROOT, "scripts", "send_resend_email.cjs")
 
     try:
-        port = int(os.getenv("SMTP_PORT", "587"))
-        username = os.getenv("SMTP_USERNAME", "").strip()
-        password = os.getenv("SMTP_PASSWORD", "")
-        sender = os.getenv("SMTP_FROM", "").strip() or username
-        if not sender:
-            return False, "Email service is missing a sender address."
-
-        message = EmailMessage()
-        message["Subject"] = f"OCULUS AI screening report — {patient_id or image_name}"
-        message["From"] = sender
-        message["To"] = recipient
-        message.set_content(
-            "Attached is the OCULUS AI diabetic retinopathy screening report. "
-            "This screening output requires ophthalmologist confirmation."
+        completed = subprocess.run(
+            ["node", bridge],
+            input=json.dumps(payload),
+            text=True,
+            capture_output=True,
+            cwd=PROJECT_ROOT,
+            timeout=30,
+            check=False,
         )
-        message.add_attachment(
-            pdf_bytes,
-            maintype="application",
-            subtype="pdf",
-            filename="oculus-ai-screening-report.pdf",
-        )
-
-        with smtplib.SMTP(host, port, timeout=15) as smtp:
-            if os.getenv("SMTP_USE_TLS", "true").lower() not in {"0", "false", "no"}:
-                smtp.starttls()
-            if username:
-                smtp.login(username, password)
-            smtp.send_message(message)
-        return True, f"Report sent to {recipient}."
-    except (OSError, smtplib.SMTPException, ValueError) as exc:
+        if completed.returncode == 0:
+            response = json.loads(completed.stdout or "{}")
+            if response.get("ok"):
+                return True, f"Report sent to {recipient}."
+        error_text = (completed.stderr or completed.stdout or "").strip()
+        try:
+            error_text = json.loads(error_text).get("message", error_text)
+        except json.JSONDecodeError:
+            pass
+        return False, f"Report could not be sent: {error_text or 'Resend returned an unknown error.'}"
+    except (OSError, subprocess.TimeoutExpired, ValueError, json.JSONDecodeError) as exc:
         return False, f"Report could not be sent: {exc}"
 
 

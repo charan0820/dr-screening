@@ -1,0 +1,24 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "description": "Quality-aware, explainable, uncertainty-calibrated Diabetic Retinopathy screening prototype. Built on a subsampled APTOS 2019 dataset in a 6-day sprint.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/charan0820/dr-screening.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/charan0820/dr-screening/issues"
+  },
+  "homepage": "https://github.com/charan0820/dr-screening#readme",
+  "dependencies": {
+    "@replit/connectors-sdk": "^0.4.3"
+  }
+}

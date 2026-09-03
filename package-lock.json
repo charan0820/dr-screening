@@ -1,0 +1,21 @@
+{
+  "name": "workspace",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "workspace",
+      "version": "1.0.0",
+      "license": "ISC",
+      "dependencies": {
+        "@replit/connectors-sdk": "^0.4.3"
+      }
+    },
+    "node_modules/@replit/connectors-sdk": {
+      "version": "0.4.3",
+      "resolved": "http://package-firewall.replit.local/npm/@replit/connectors-sdk/-/connectors-sdk-0.4.3.tgz",
+      "integrity": "sha512-7XoaRty/O6JF161UkVBI8UewZ96XCNNN1kRvT9Q41IRH3xr+6ImylvXtirIghydDd2FCQvIkY4HQscOOr45otA=="
+    }
+  }
+}
