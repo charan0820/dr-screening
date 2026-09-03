@@ -1,0 +1,1 @@
+- [Streamlit layout containers](streamlit-layout.md) — native widgets cannot be visually wrapped by separate HTML open/close markdown blocks.

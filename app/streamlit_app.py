@@ -174,6 +174,8 @@ html, body, [data-testid="stAppViewContainer"] {{
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
+    border-radius: 50%;
+    clip-path: ellipse(44% 47% at 50% 50%);
     opacity: .10;
     animation: eyeCycle 24s ease-in-out infinite;
 }}
@@ -895,7 +897,7 @@ with input_col:
             if st.button(
                 "Analyze image",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
                 disabled=st.session_state["analysis_result"] is not None,
             ):
                 st.session_state["email_status"] = None
@@ -1035,7 +1037,7 @@ if result is not None and analysis_image is not None:
     for column, label, image in evidence:
         with column:
             st.markdown(f'<div class="evidence-label">{label}</div>', unsafe_allow_html=True)
-            st.image(image, use_container_width=True)
+            st.image(image, width="stretch")
 
     st.markdown("<br>", unsafe_allow_html=True)
     with st.container(border=True):
@@ -1048,7 +1050,7 @@ if result is not None and analysis_image is not None:
         )
         explain_col1, explain_col2 = st.columns([1, 1.15], gap="large")
         with explain_col1:
-            st.image(result["gradcam"], use_container_width=True)
+            st.image(result["gradcam"], width="stretch")
         with explain_col2:
             st.markdown(
                 f'<div class="card"><div class="metric-label">Model interpretation</div>'
@@ -1092,14 +1094,14 @@ if result is not None and analysis_image is not None:
         for column, (label, image) in zip(summary_images * 2, summary_evidence):
             with column:
                 st.markdown(f'<div class="evidence-label">{label}</div>', unsafe_allow_html=True)
-                st.image(image, use_container_width=True)
+                st.image(image, width="stretch")
 
     st.markdown("<br>", unsafe_allow_html=True)
     action_col1, action_col2, action_col3 = st.columns([1, 1, 1.35], gap="medium")
-    if action_col1.button("Modify DR grade", use_container_width=True):
+    if action_col1.button("Modify DR grade", width="stretch"):
         st.session_state["decision_made"] = "Modify DR grade"
         st.session_state["modify_grade_placeholder"] = True
-    if action_col2.button("Request recapture", use_container_width=True):
+    if action_col2.button("Request recapture", width="stretch"):
         st.session_state["decision_made"] = "Request recapture"
         st.session_state["recapture_requested"] = True
         _reset_analysis(clear_upload=True)
@@ -1110,7 +1112,7 @@ if result is not None and analysis_image is not None:
             data=st.session_state["analysis_pdf"],
             file_name="oculus-ai-screening-report.pdf",
             mime="application/pdf",
-            use_container_width=True,
+            width="stretch",
         )
 
     if st.session_state.get("modify_grade_placeholder"):
@@ -1132,7 +1134,7 @@ if result is not None and analysis_image is not None:
     if recipient and _is_valid_email(recipient):
         email_col1, email_col2 = st.columns([1, 1.4], gap="medium")
         with email_col1:
-            if st.button("Send report by email", use_container_width=True):
+            if st.button("Send report by email", width="stretch"):
                 status = _send_pdf_email(
                     recipient,
                     st.session_state["analysis_pdf"],
