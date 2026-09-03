@@ -34,3 +34,8 @@ waitForPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+RESEND_FROM_EMAIL = "b.charan202006@gmail.com"
