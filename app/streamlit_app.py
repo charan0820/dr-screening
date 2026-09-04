@@ -26,7 +26,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     Image as RLImage,
-    KeepTogether,
+    KeepInFrame,
     Paragraph,
     SimpleDocTemplate,
     Spacer,
@@ -209,7 +209,7 @@ html, body, [data-testid="stAppViewContainer"] {{
 .hero-brand {{
     color: #f5fffe;
     font-family: var(--font-heading);
-    font-size: clamp(2.1rem, 7.2vw, 7.2rem);
+    font-size: clamp(2.1rem, 4.8vw, 4.8rem);
     font-weight: 900;
     letter-spacing: .08em;
     line-height: 1;
@@ -484,7 +484,7 @@ html, body, [data-testid="stAppViewContainer"] {{
     margin-top: .4rem;
 }}
 .st-key-floating-controls [data-testid="stSelectbox"] [data-baseweb="select"] {{
-    width: 156px;
+    width: 64px;
 }}
 .st-key-floating-controls [data-testid="stSelectbox"] [data-baseweb="select"] > div {{
     min-height: 42px;
@@ -787,9 +787,16 @@ def build_pdf_report(
             ]
         )
     )
-    story.extend([rec_table, Spacer(1, 10), Paragraph("Visual evidence", styles["Heading2"]), Spacer(1, 4)])
+    evidence_heading_style = ParagraphStyle(
+        "EvidenceHeading",
+        parent=styles["Heading2"],
+        fontSize=11,
+        spaceBefore=0,
+        spaceAfter=0,
+    )
+    story.extend([rec_table, Spacer(1, 6), Paragraph("Visual evidence", evidence_heading_style), Spacer(1, 3)])
 
-    img_width = 2.35 * inch
+    img_width = 2.1 * inch
     image_grid = Table(
         [
             [Paragraph("Original", label_style), Paragraph("Enhanced", label_style)],
@@ -820,7 +827,7 @@ def build_pdf_report(
     )
     story.extend(
         [
-            KeepTogether(image_grid),
+            image_grid,
             Spacer(1, 14),
             Paragraph(
                 "Grad-CAM and lesion overlays are interpretability aids, not standalone clinical evidence. "
@@ -830,6 +837,13 @@ def build_pdf_report(
             ),
         ]
     )
+
+    # Force everything onto a single page: shrink the whole story to fit the
+    # usable page area instead of letting it overflow onto a second page.
+    frame_width = doc.width
+    frame_height = doc.height
+    story = [KeepInFrame(frame_width, frame_height, story, mode="shrink")]
+
     doc.build(story)
     buffer.seek(0)
     return buffer.getvalue()
