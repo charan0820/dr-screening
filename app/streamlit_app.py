@@ -247,7 +247,7 @@ html, body, [data-testid="stAppViewContainer"] {{
     margin: 0;
 }}
 .hero-copy {{
-    color: var(--muted);
+    color: var(--ink);
     font-size: clamp(1rem, 1.5vw, 1.18rem);
     line-height: 1.55;
     max-width: 610px;
@@ -256,7 +256,7 @@ html, body, [data-testid="stAppViewContainer"] {{
 .fact-carousel {{
     position: relative;
     min-height: 2.2rem;
-    color: var(--teal);
+    color: var(--navy);
     font-size: .88rem;
     font-weight: 600;
     max-width: 500px;
@@ -293,7 +293,7 @@ html, body, [data-testid="stAppViewContainer"] {{
     letter-spacing: -.035em;
     margin: 0 0 .4rem;
 }}
-.section-copy {{ color: var(--muted); line-height: 1.55; }}
+.section-copy {{ color: var(--ink); line-height: 1.55; }}
 .card {{
     background: rgba(255, 255, 255, .76);
     border: 1px solid rgba(23, 107, 135, .14);
@@ -399,7 +399,7 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 .disclaimer {{
     border-top: 1px solid var(--line);
-    color: var(--muted);
+    color: var(--ink);
     font-size: .77rem;
     line-height: 1.5;
     margin-top: 2.5rem;
@@ -445,6 +445,20 @@ html, body, [data-testid="stAppViewContainer"] {{
 .topbar .stTextInput input {{ background: rgba(255,255,255,.1); color: var(--mist); border-color: rgba(218,255,251,.22); }}
 .topbar .stSelectbox div[data-baseweb="select"] > div {{ background: rgba(255,255,255,.1); color: var(--mist); border-color: rgba(218,255,251,.22); }}
 .topbar [data-testid="stWidgetLabel"] p {{ color: rgba(218,255,251,.72); }}
+
+[data-testid="stVerticalBlockBorderWrapper"] {{
+    color: var(--navy);
+}}
+[data-testid="stVerticalBlockBorderWrapper"] p,
+[data-testid="stVerticalBlockBorderWrapper"] label,
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] {{
+    color: var(--ink);
+}}
+[data-testid="stExpander"] p,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"],
+[data-testid="stExpander"] pre {{
+    color: var(--navy) !important;
+}}
 
 @media (max-width: 700px) {{
     [data-testid="stMainBlockContainer"] {{ padding: .75rem .75rem 3rem; }}
