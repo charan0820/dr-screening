@@ -10,13 +10,10 @@ import html
 import json
 import os
 import re
-import smtplib
 import subprocess
 import sys
-import time
 import urllib.parse
 from datetime import date
-from email.message import EmailMessage
 from io import BytesIO
 
 import numpy as np
@@ -302,6 +299,39 @@ html, body, [data-testid="stAppViewContainer"] {{
     box-shadow: 0 14px 40px rgba(0, 28, 48, .07);
     backdrop-filter: blur(10px);
 }}
+.card, .metric-card, .recommendation, [data-testid="stForm"] {{
+    color: var(--ink);
+}}
+.card p, .card span, .metric-card p, .metric-card span,
+.recommendation span, [data-testid="stForm"] p,
+[data-testid="stForm"] label, [data-testid="stForm"] [data-testid="stWidgetLabel"] p {{
+    color: var(--ink);
+}}
+.report-card {{
+    background: rgba(255, 255, 255, .92);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    line-height: 1.6;
+    padding: 1rem 1.1rem;
+    white-space: pre-wrap;
+}}
+.report-card * {{ color: var(--ink) !important; }}
+[data-testid="stAlert"] p, [data-testid="stAlert"] span,
+[data-testid="stAlert"] [data-testid="stMarkdownContainer"] {{
+    color: var(--ink) !important;
+}}
+[data-testid="stForm"] {{
+    background: rgba(255, 255, 255, .62);
+    border: 1px solid rgba(23, 107, 135, .16);
+    border-radius: 22px;
+    padding: 1.2rem;
+}}
+.stTextInput input, .stNumberInput input, .stDateInput input,
+[data-baseweb="select"] > div {{
+    color: var(--ink) !important;
+}}
 .upload-card {{
     background: var(--navy);
     border-radius: 22px;
@@ -422,9 +452,7 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
 
-.stTextInput input, .stNumberInput input, .stDateInput input {{
-    border-radius: 10px;
-}}
+.stTextInput input, .stNumberInput input, .stDateInput input {{ border-radius: 10px; }}
 .stButton > button, .stDownloadButton > button {{
     border: 0;
     border-radius: 11px;
@@ -875,7 +903,7 @@ for key, default in {
 
 
 with st.container():
-    nav_col, menu_col, email_col = st.columns([2.1, 1.25, 1.7], vertical_alignment="center")
+    nav_col, menu_col = st.columns([2.1, 1.25], vertical_alignment="center")
     with nav_col:
         st.markdown(
             '<div class="brand-wrap"><div class="brand-mark">OCULUS <span>AI</span></div>'
@@ -887,13 +915,6 @@ with st.container():
             "Menu",
             ["Menu", "About us", "Explore our model", "Our codebase", "References"],
             key="menu_choice",
-            label_visibility="collapsed",
-        )
-    with email_col:
-        st.text_input(
-            "Report email",
-            placeholder="Receiver email",
-            key="receiver_email",
             label_visibility="collapsed",
         )
 
@@ -919,128 +940,130 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-model = load_model()
-if model is None:
-    st.warning("No trained checkpoint was found. The existing placeholder fallback will be used.")
-
 st.markdown("<br>", unsafe_allow_html=True)
-input_col, details_col = st.columns([1.18, 0.82], gap="large")
+with st.form("screening_form", clear_on_submit=False):
+    input_col, details_col = st.columns([1.18, 0.82], gap="large")
 
-with input_col:
-    st.markdown('<div class="section-label">Step 01 · Image input</div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-title">Upload a retinal image</h2>', unsafe_allow_html=True)
-    st.markdown(
-        '<p class="section-copy">Use a clear, centered fundus photograph. '
-        "The image will be checked before any DR prediction is made.</p>",
-        unsafe_allow_html=True,
-    )
-    uploaded_file = st.file_uploader(
-        "Upload retinal image",
-        type=["png", "jpg", "jpeg"],
-        key=f"fundus_upload_{st.session_state['uploader_version']}",
-        help="Accepted formats: PNG, JPG, JPEG.",
-    )
-
-    if uploaded_file is not None:
-        file_id = getattr(
-            uploaded_file,
-            "file_id",
-            f"{uploaded_file.name}:{getattr(uploaded_file, 'size', '')}",
-        )
-        if st.session_state["selected_file_id"] != file_id:
-            st.session_state["selected_file_id"] = file_id
-            _reset_analysis()
-            st.session_state["recapture_requested"] = False
-
-        preview = _safe_upload_image(uploaded_file)
-        if preview is None:
-            st.error("This file could not be opened as an image. Please choose a PNG or JPG fundus image.")
-        else:
-            preview_buffer = BytesIO()
-            preview.save(preview_buffer, format="JPEG", quality=86)
-            preview_uri = "data:image/jpeg;base64," + base64.b64encode(preview_buffer.getvalue()).decode("ascii")
-            st.markdown(
-                f'<div class="preview-card"><img src="{preview_uri}" alt="Selected retinal image">'
-                f'<div class="preview-caption"><span>{html.escape(uploaded_file.name)}</span>'
-                "<span>Image ready</span></div></div>",
-                unsafe_allow_html=True,
-            )
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button(
-                "Analyze image",
-                type="primary",
-                width="stretch",
-                disabled=st.session_state["analysis_result"] is not None,
-            ):
-                st.session_state["email_status"] = None
-                processing = st.empty()
-                progress = st.progress(8, text="Preparing image quality checks…")
-                processing.markdown(
-                    f'<div class="processing-card"><img src="{BUFFERING_EYE}" alt="">'
-                    "<div><strong>Analysis in progress</strong><br>"
-                    '<span style="color:#55717C">Checking quality, evidence, and referral risk…</span></div></div>',
-                    unsafe_allow_html=True,
-                )
-                try:
-                    image = np.array(preview.resize(MODEL_INPUT_SIZE, Image.Resampling.LANCZOS))
-                    progress.progress(30, text="Assessing image quality…")
-                    result = run_pipeline(image, model=model)
-                    progress.progress(82, text="Preparing clinical summary…")
-                    patient = {
-                        "patient_id": st.session_state.get("patient_id", "").strip(),
-                        "age": st.session_state.get("patient_age", 45),
-                        "screening_date": st.session_state.get("screening_date", date.today()),
-                        "eye": st.session_state.get("screening_eye", "Right"),
-                    }
-                    pdf = build_pdf_report(
-                        result,
-                        image,
-                        image_name=uploaded_file.name,
-                        patient_id=patient["patient_id"],
-                        age=patient["age"],
-                        screening_date=patient["screening_date"],
-                        eye=patient["eye"],
-                    )
-                    st.session_state["analysis_result"] = result
-                    st.session_state["analysis_image"] = image
-                    st.session_state["analysis_pdf"] = pdf
-                    st.session_state["analysis_patient"] = patient
-                    recipient = st.session_state.get("receiver_email", "").strip()
-                    if recipient:
-                        st.session_state["email_status"] = _send_pdf_email(
-                            recipient,
-                            pdf,
-                            patient_id=patient["patient_id"],
-                            image_name=uploaded_file.name,
-                        )
-                    progress.progress(100, text="Analysis ready")
-                    time.sleep(.25)
-                    st.rerun()
-                except Exception as exc:
-                    progress.empty()
-                    processing.error(f"Processing failed: {exc}")
-
-
-with details_col:
-    st.markdown('<div class="section-label">Step 02 · Screening information</div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-title">Patient context</h2>', unsafe_allow_html=True)
-    st.markdown(
-        '<p class="section-copy">Use the minimum information needed to identify this screening case.</p>',
-        unsafe_allow_html=True,
-    )
-    st.text_input("Patient ID", placeholder="e.g. PHC-2026-001", key="patient_id")
-    st.number_input("Age", min_value=1, max_value=120, value=45, step=1, key="patient_age")
-    st.date_input("Screening date", value=date.today(), key="screening_date")
-    st.radio("Eye being screened", ["Right", "Left"], horizontal=True, key="screening_eye")
-
-    if uploaded_file is None:
-        st.markdown("<br>", unsafe_allow_html=True)
+    with input_col:
+        st.markdown('<div class="section-label">Step 01 · Image input</div>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-title">Upload a retinal image</h2>', unsafe_allow_html=True)
         st.markdown(
-            '<div class="card"><div class="section-label">Ready when you are</div>'
-            '<h2 class="section-title">Start with one image</h2>'
-            '<p class="section-copy">Upload a fundus image on the left. The analysis button will appear after the image is ready.</p></div>',
+            '<p class="section-copy">Use a clear, centered fundus photograph. '
+            "The image will be checked before any DR prediction is made.</p>",
             unsafe_allow_html=True,
         )
+        uploaded_file = st.file_uploader(
+            "Upload retinal image",
+            type=["png", "jpg", "jpeg"],
+            key=f"fundus_upload_{st.session_state['uploader_version']}",
+            help="Accepted formats: PNG, JPG, JPEG.",
+        )
+
+        preview = _safe_upload_image(uploaded_file) if uploaded_file is not None else None
+        if uploaded_file is not None:
+            if preview is None:
+                st.error("This file could not be opened as an image. Please choose a PNG or JPG fundus image.")
+            else:
+                preview_buffer = BytesIO()
+                preview.save(preview_buffer, format="JPEG", quality=86)
+                preview_uri = "data:image/jpeg;base64," + base64.b64encode(preview_buffer.getvalue()).decode("ascii")
+                st.markdown(
+                    f'<div class="preview-card"><img src="{preview_uri}" alt="Selected retinal image">'
+                    f'<div class="preview-caption"><span>{html.escape(uploaded_file.name)}</span>'
+                    "<span>Image ready</span></div></div>",
+                    unsafe_allow_html=True,
+                )
+        analyze_requested = st.form_submit_button(
+            "Analyze image",
+            type="primary",
+            width="stretch",
+            disabled=uploaded_file is None or preview is None or st.session_state["analysis_result"] is not None,
+        )
+
+    with details_col:
+        st.markdown('<div class="section-label">Step 02 · Screening information</div>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-title">Patient context</h2>', unsafe_allow_html=True)
+        st.markdown(
+            '<p class="section-copy">Complete the case details, then analyze once when the image is ready.</p>',
+            unsafe_allow_html=True,
+        )
+        st.text_input("Patient ID", placeholder="e.g. PHC-2026-001", key="patient_id")
+        st.number_input("Age", min_value=1, max_value=120, value=45, step=1, key="patient_age")
+        st.date_input("Screening date", value=date.today(), key="screening_date")
+        st.radio("Eye being screened", ["Right", "Left"], horizontal=True, key="screening_eye")
+        st.text_input(
+            "Report recipient email (optional)",
+            placeholder="PHC or clinician email",
+            key="receiver_email",
+        )
+        if uploaded_file is None:
+            st.markdown(
+                '<div class="card"><div class="section-label">Ready when you are</div>'
+                '<h2 class="section-title">Start with one image</h2>'
+                '<p class="section-copy">Upload a fundus image on the left. Patient fields stay local until you submit the analysis.</p></div>',
+                unsafe_allow_html=True,
+            )
+
+if uploaded_file is not None:
+    file_id = getattr(
+        uploaded_file,
+        "file_id",
+        f"{uploaded_file.name}:{getattr(uploaded_file, 'size', '')}",
+    )
+    if st.session_state["selected_file_id"] != file_id:
+        st.session_state["selected_file_id"] = file_id
+        _reset_analysis()
+        st.session_state["recapture_requested"] = False
+
+if analyze_requested and uploaded_file is not None and preview is not None:
+    st.session_state["email_status"] = None
+    processing = st.empty()
+    progress = st.progress(8, text="Preparing image quality checks…")
+    processing.markdown(
+        f'<div class="processing-card"><img src="{BUFFERING_EYE}" alt="">'
+        "<div><strong>Analysis in progress</strong><br>"
+        '<span style="color:#082A3D">Checking quality, evidence, and referral risk…</span></div></div>',
+        unsafe_allow_html=True,
+    )
+    try:
+        model = load_model()
+        image = np.array(preview.resize(MODEL_INPUT_SIZE, Image.Resampling.LANCZOS))
+        progress.progress(30, text="Assessing image quality…")
+        result = run_pipeline(image, model=model)
+        progress.progress(82, text="Preparing clinical summary…")
+        patient = {
+            "patient_id": st.session_state.get("patient_id", "").strip(),
+            "age": st.session_state.get("patient_age", 45),
+            "screening_date": st.session_state.get("screening_date", date.today()),
+            "eye": st.session_state.get("screening_eye", "Right"),
+        }
+        pdf = build_pdf_report(
+            result,
+            image,
+            image_name=uploaded_file.name,
+            patient_id=patient["patient_id"],
+            age=patient["age"],
+            screening_date=patient["screening_date"],
+            eye=patient["eye"],
+        )
+        st.session_state["analysis_result"] = result
+        st.session_state["analysis_image"] = image
+        st.session_state["analysis_pdf"] = pdf
+        st.session_state["analysis_patient"] = patient
+        recipient = st.session_state.get("receiver_email", "").strip()
+        if recipient:
+            st.session_state["email_status"] = _send_pdf_email(
+                recipient,
+                pdf,
+                patient_id=patient["patient_id"],
+                image_name=uploaded_file.name,
+            )
+        progress.progress(100, text="Analysis ready")
+        progress.empty()
+        processing.empty()
+    except Exception as exc:
+        progress.empty()
+        processing.error(f"Processing failed: {exc}")
 
 
 result = st.session_state.get("analysis_result")
@@ -1193,6 +1216,26 @@ if result is not None and analysis_image is not None:
         )
 
     email_status = st.session_state.get("email_status")
+    recipient = st.session_state.get("receiver_email", "").strip()
+    if recipient and _is_valid_email(recipient):
+        email_col1, email_col2 = st.columns([1, 1.4], gap="medium")
+        with email_col1:
+            if st.button("Send report by email", width="stretch"):
+                email_status = _send_pdf_email(
+                    recipient,
+                    st.session_state["analysis_pdf"],
+                    patient_id=analysis_patient.get("patient_id", ""),
+                    image_name=uploaded_file.name if uploaded_file else "screening",
+                )
+                st.session_state["email_status"] = email_status
+        with email_col2:
+            st.markdown(
+                f'<a href="{_mailto_link(recipient, result)}" target="_blank" '
+                'style="color:#176B87;font-weight:700;line-height:2.8rem;">'
+                "Open email client</a>",
+                unsafe_allow_html=True,
+            )
+
     if email_status:
         sent, message = email_status
         if sent is True:
@@ -1202,29 +1245,11 @@ if result is not None and analysis_image is not None:
         else:
             st.info(message)
 
-    recipient = st.session_state.get("receiver_email", "").strip()
-    if recipient and _is_valid_email(recipient):
-        email_col1, email_col2 = st.columns([1, 1.4], gap="medium")
-        with email_col1:
-            if st.button("Send report by email", width="stretch"):
-                status = _send_pdf_email(
-                    recipient,
-                    st.session_state["analysis_pdf"],
-                    patient_id=analysis_patient.get("patient_id", ""),
-                    image_name=uploaded_file.name if uploaded_file else "screening",
-                )
-                st.session_state["email_status"] = status
-                st.rerun()
-        with email_col2:
-            st.markdown(
-                f'<a href="{_mailto_link(recipient, result)}" target="_blank" '
-                'style="color:#176B87;font-weight:700;line-height:2.8rem;">'
-                "Open email client</a>",
-                unsafe_allow_html=True,
-            )
-
-    with st.expander("View full rule-based report"):
-        st.text(result["report"])
+    with st.expander("Full rule-based report", expanded=True):
+        st.markdown(
+            f'<div class="report-card">{html.escape(str(result["report"]))}</div>',
+            unsafe_allow_html=True,
+        )
 
 elif uploaded_file is None:
     st.markdown("<br>", unsafe_allow_html=True)
