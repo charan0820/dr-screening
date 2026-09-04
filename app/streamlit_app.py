@@ -69,6 +69,7 @@ PALETTE = {
 }
 
 
+@st.cache_data(show_spinner=False)
 def _asset_data_uri(filename: str, *, remove_dark_background: bool = False) -> str:
     """Prepare a small self-contained asset for the CSS background layers."""
     path = os.path.join(ASSET_DIR, filename)
@@ -104,6 +105,7 @@ def _asset_data_uri(filename: str, *, remove_dark_background: bool = False) -> s
         return ""
 
 
+@st.cache_data(show_spinner=False)
 def _raw_asset_data_uri(filename: str) -> str:
     path = os.path.join(ASSET_DIR, filename)
     if not os.path.exists(path):
@@ -119,12 +121,11 @@ def _raw_asset_data_uri(filename: str) -> str:
 
 
 EYE_ONE = _asset_data_uri("bg_eye1_1788438058172.png")
-EYE_TWO = _asset_data_uri("bg_eye2_1788438058173.jpeg", remove_dark_background=True)
 BUFFERING_EYE = _raw_asset_data_uri("buffering_eye_1788438058173.avif")
 
 CUSTOM_CSS = f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800;900&family=Abel&family=Cardo:ital,wght@0,400;0,700;1,400&display=swap');
 
 :root {{
     --navy: {PALETTE["navy"]};
@@ -134,16 +135,33 @@ CUSTOM_CSS = f"""
     --ink: {PALETTE["ink"]};
     --muted: {PALETTE["muted"]};
     --line: {PALETTE["line"]};
+    --font-heading: 'Orbitron', sans-serif;
+    --font-subheading: 'Abel', sans-serif;
+    --font-body: 'Cardo', serif;
+    /* Fixed "middle" tone used for any container/control that must not
+       flip between Streamlit's light and dark themes (inputs, native
+       buttons, bordered containers). Paired text colour is chosen for
+       contrast against it and likewise kept fixed. */
+    --surface: var(--teal);
+    --surface-text: var(--mist);
+}}
+
+html {{
+    scroll-behavior: smooth;
 }}
 
 html, body, [data-testid="stAppViewContainer"] {{
     background: var(--mist);
     color: var(--ink);
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-body);
+    min-height: 100%;
 }}
 
 [data-testid="stHeader"] {{
-    background: transparent;
+    background: #00111f;
+    box-shadow: none;
+    height: 1.45rem;
+    min-height: 1.45rem;
 }}
 
 [data-testid="stAppViewContainer"] > .main {{
@@ -152,54 +170,85 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 
 [data-testid="stMainBlockContainer"] {{
-    max-width: 1420px;
-    padding: 1.15rem clamp(1rem, 3vw, 3.5rem) 4rem;
+    max-width: none;
+    padding: 0 .5in 4rem;
 }}
 
-.eye-background {{
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
+[data-testid="stMainBlockContainer"] > div {{
+    width: 100%;
+}}
+
+.hero-panel {{
+    position: relative;
+    isolation: isolate;
+    min-height: 100vh;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
     overflow: hidden;
-    z-index: 0;
-    background: radial-gradient(circle at 74% 26%, rgba(100, 204, 197, .14), transparent 34%);
+    padding: clamp(2rem, 6vw, 5.5rem) clamp(1.4rem, 7vw, 7rem);
+    margin: 0 -.5in 2.3rem;
+    color: var(--mist);
+    background: #00111f;
+    box-shadow: 6px 7px 0 rgba(0, 17, 31, .16);
 }}
-
-.eye-layer {{
+.hero-panel::after {{
+    content: "";
     position: absolute;
-    right: -9vw;
-    top: 4vh;
-    width: min(62vw, 860px);
-    height: min(62vw, 860px);
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: contain;
-    border-radius: 50%;
-    clip-path: ellipse(44% 47% at 50% 50%);
-    opacity: .10;
-    animation: eyeCycle 24s ease-in-out infinite;
+    z-index: -1;
+    right: -25vw;
+    top: 50%;
+    width: min(110vw, 1200px);
+    height: min(110vw, 1200px);
+    transform: translateY(-50%);
+    background: url("{EYE_ONE}") center / contain no-repeat;
+    filter: saturate(1.18) contrast(1.08);
+    opacity: .82;
+    mix-blend-mode: screen;
 }}
-.eye-layer.one {{ background-image: url("{EYE_ONE}"); animation-delay: 0s; }}
-.eye-layer.one {{ clip-path: ellipse(35% 50% at 50% 50%); }}
-.eye-layer.two {{
-    background-image: url("{EYE_TWO}");
-    animation-delay: -8s;
-    clip-path: ellipse(35% 50% at 50% 50%);
+.hero-brand {{
+    color: #f5fffe;
+    font-family: var(--font-heading);
+    font-size: clamp(2.1rem, 7.2vw, 7.2rem);
+    font-weight: 900;
+    letter-spacing: .08em;
+    line-height: 1;
+    margin-bottom: 1.1rem;
 }}
-.eye-layer.three {{
-    background-image: url("{BUFFERING_EYE}");
-    animation-delay: -16s;
-    opacity: .06;
+.hero-brand span {{ color: var(--aqua); }}
+.hero-content {{
+    position: relative;
+    z-index: 1;
+    max-width: min(620px, 62vw);
 }}
-@keyframes eyeCycle {{
-    0%, 28% {{ opacity: .10; transform: scale(1) rotate(-3deg); }}
-    34%, 61% {{ opacity: 0; transform: scale(1.04) rotate(2deg); }}
-    68%, 95% {{ opacity: .08; transform: scale(1.02) rotate(-1deg); }}
-    100% {{ opacity: .10; transform: scale(1) rotate(-3deg); }}
+.hero-panel .hero-kicker {{ color: var(--aqua); margin-top: 0; }}
+.hero-panel .hero-title {{
+    color: #f5fffe;
+    font-size: clamp(1.55rem, 3.2vw, 3.25rem);
+    line-height: 1.05;
+    text-shadow: 0 4px 26px rgba(0, 0, 0, .32);
+}}
+.hero-panel .hero-copy {{
+    color: rgba(218, 255, 251, .82);
+    max-width: 540px;
+}}
+.hero-panel .fact-carousel {{ color: var(--mist); }}
+.hero-chip {{
+    display: inline-flex;
+    border: 1px solid rgba(100, 204, 197, .55);
+    border-radius: 999px;
+    padding: .35rem .7rem;
+    margin-bottom: 1rem;
+    color: var(--mist);
+    font-family: var(--font-subheading);
+    font-size: .74rem;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
 }}
 
 .brand-mark {{
-    font-family: 'Manrope', sans-serif;
+    font-family: var(--font-heading);
     font-size: clamp(1.2rem, 2vw, 1.6rem);
     font-weight: 800;
     letter-spacing: .08em;
@@ -207,28 +256,16 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 .brand-mark span {{ color: var(--aqua); }}
 .brand-subtitle {{
+    font-family: var(--font-subheading);
     color: rgba(218, 255, 251, .72);
-    font-size: .74rem;
+    font-size: .82rem;
     letter-spacing: .05em;
     margin-top: .15rem;
 }}
-.topbar {{
-    background: var(--navy);
-    border-radius: 18px;
-    padding: .9rem 1.2rem;
-    margin-bottom: 1.35rem;
-    box-shadow: 0 12px 30px rgba(0, 28, 48, .12);
-}}
-.topbar [data-testid="stHorizontalBlock"] {{ align-items: center; }}
-.brand-wrap {{
-    background: var(--navy);
-    border-radius: 16px;
-    padding: .7rem .9rem;
-}}
-
 .hero-kicker {{
+    font-family: var(--font-subheading);
     color: var(--teal);
-    font-size: .74rem;
+    font-size: .92rem;
     font-weight: 800;
     letter-spacing: .16em;
     text-transform: uppercase;
@@ -236,15 +273,16 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 .hero-title {{
     color: var(--navy);
-    font-family: 'Manrope', sans-serif;
+    font-family: var(--font-heading);
     font-size: clamp(2rem, 5vw, 4.25rem);
     font-weight: 800;
-    letter-spacing: -.065em;
-    line-height: .98;
+    letter-spacing: -.02em;
+    line-height: 1.05;
     max-width: 820px;
     margin: 0;
 }}
 .hero-copy {{
+    font-family: var(--font-body);
     color: var(--ink);
     font-size: clamp(1rem, 1.5vw, 1.18rem);
     line-height: 1.55;
@@ -254,8 +292,9 @@ html, body, [data-testid="stAppViewContainer"] {{
 .fact-carousel {{
     position: relative;
     min-height: 2.2rem;
+    font-family: var(--font-body);
     color: var(--navy);
-    font-size: .88rem;
+    font-size: .95rem;
     font-weight: 600;
     max-width: 500px;
     overflow: hidden;
@@ -276,8 +315,9 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 
 .section-label {{
+    font-family: var(--font-subheading);
     color: var(--teal);
-    font-size: .72rem;
+    font-size: .88rem;
     font-weight: 800;
     letter-spacing: .16em;
     text-transform: uppercase;
@@ -285,13 +325,13 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 .section-title {{
     color: var(--navy);
-    font-family: 'Manrope', sans-serif;
+    font-family: var(--font-heading);
     font-size: clamp(1.3rem, 2vw, 1.8rem);
     font-weight: 800;
-    letter-spacing: -.035em;
+    letter-spacing: -.01em;
     margin: 0 0 .4rem;
 }}
-.section-copy {{ color: var(--ink); line-height: 1.55; }}
+.section-copy {{ font-family: var(--font-body); color: var(--ink); line-height: 1.55; }}
 .card {{
     background: rgba(255, 255, 255, .76);
     border: 1px solid rgba(23, 107, 135, .14);
@@ -350,13 +390,13 @@ html, body, [data-testid="stAppViewContainer"] {{
 .result-pill.recapture {{ color: #ffe3e0; background: rgba(168, 72, 67, .5); }}
 .grade-number {{
     color: var(--aqua);
-    font-family: 'Manrope', sans-serif;
+    font-family: var(--font-heading);
     font-size: clamp(3rem, 7vw, 5.8rem);
     font-weight: 800;
-    letter-spacing: -.08em;
-    line-height: .9;
+    letter-spacing: -.02em;
+    line-height: 1;
 }}
-.grade-name {{ font-size: 1.1rem; font-weight: 700; margin-top: .4rem; }}
+.grade-name {{ font-family: var(--font-subheading); font-size: 1.25rem; font-weight: 700; margin-top: .4rem; }}
 .metric-card {{
     background: rgba(255,255,255,.83);
     border: 1px solid rgba(23, 107, 135, .13);
@@ -365,19 +405,21 @@ html, body, [data-testid="stAppViewContainer"] {{
     height: 100%;
 }}
 .metric-label {{
-    color: var(--muted);
-    font-size: .72rem;
+    font-family: var(--font-subheading);
+    color: var(--navy);
+    font-size: .84rem;
     font-weight: 700;
     letter-spacing: .08em;
     text-transform: uppercase;
 }}
 .metric-value {{
     color: var(--navy);
-    font-family: 'Manrope', sans-serif;
+    font-family: var(--font-heading);
     font-size: 1.45rem;
     font-weight: 800;
     margin-top: .38rem;
 }}
+.metric-card + .metric-card {{ margin-top: .9rem; }}
 .recommendation {{
     border-radius: 18px;
     padding: 1rem 1.15rem;
@@ -386,19 +428,134 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 .recommendation.review {{ border-left-color: #D29A49; background: rgba(210, 154, 73, .14); }}
 .recommendation.recapture {{ border-left-color: #B9534A; background: rgba(185, 83, 74, .13); }}
-.recommendation strong {{ color: var(--navy); font-family: 'Manrope', sans-serif; }}
+.recommendation {{ font-family: var(--font-body); }}
+.recommendation strong {{ color: var(--navy); font-family: var(--font-heading); }}
 .evidence-label {{
+    font-family: var(--font-subheading);
     color: var(--navy);
-    font-size: .78rem;
+    font-size: .9rem;
     font-weight: 800;
     letter-spacing: .07em;
     text-transform: uppercase;
     margin-bottom: .45rem;
 }}
+
+/* Use crisp corners and a restrained offset shadow for the page's panels. */
+.card,
+.upload-card,
+.preview-card,
+.result-hero,
+.metric-card,
+.recommendation,
+.stVerticalBlockBorderWrapper,
+[data-testid="stVerticalBlockBorderWrapper"],
+.stExpander {{
+    border-radius: 0 !important;
+    box-shadow: 5px 5px 0 rgba(0, 28, 48, .14) !important;
+}}
+.stTextInput input,
+.stNumberInput input,
+.stDateInput input,
+.stSelectbox div[data-baseweb="select"] > div,
+.stButton > button,
+.stDownloadButton > button {{
+    border-radius: 0 !important;
+    box-shadow: 4px 4px 0 rgba(0, 28, 48, .12);
+}}
+
+.st-key-floating-controls {{
+    position: fixed;
+    top: .5in;
+    right: .5in;
+    z-index: 30;
+    width: 220px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}}
+.st-key-floating-controls [data-testid="stWidgetLabel"] {{
+    display: none;
+}}
+.st-key-floating-controls [data-testid="stSelectbox"] {{
+    display: flex;
+    justify-content: flex-end;
+    margin-top: .4rem;
+}}
+.st-key-floating-controls [data-testid="stSelectbox"] [data-baseweb="select"] {{
+    width: 156px;
+}}
+.st-key-floating-controls [data-testid="stSelectbox"] [data-baseweb="select"] > div {{
+    min-height: 42px;
+    justify-content: center;
+    padding: 0;
+}}
+.st-key-floating-controls [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+.st-key-floating-controls [data-testid="stSelectbox"] [data-baseweb="select"] > div > div {{
+    min-width: 64px;
+}}
+.st-key-floating-controls [data-testid="stSelectbox"] [data-baseweb="select"] > div {{
+    min-height: 32px;
+}}
+.st-key-floating-controls [data-testid="stTextInput"] input {{
+    min-height: 30px;
+    font-size: .78rem;
+}}
+
+/* Keep the compact trigger, but let the opened menu show every label. */
+[data-baseweb="popover"] [data-baseweb="menu"] {{
+    min-width: 245px !important;
+}}
+[data-baseweb="popover"] [role="option"] {{
+    min-width: 245px !important;
+    white-space: nowrap !important;
+}}
+.about-section {{
+    margin: 0 0 2rem;
+    padding: 1.3rem 1.5rem;
+    border-left: 4px solid var(--aqua);
+    background: #eafaf8;
+    border-radius: 0;
+    box-shadow: 5px 5px 0 rgba(0, 28, 48, .14);
+}}
+.about-section .section-title {{ margin-bottom: .35rem; }}
+.report-section {{
+    background: rgba(0, 17, 31, .96);
+    border-radius: 0;
+    color: var(--mist);
+    padding: clamp(1.2rem, 2.8vw, 2rem);
+    box-shadow: 5px 5px 0 rgba(0, 28, 48, .18);
+}}
+.report-section .section-label,
+.report-section .section-title,
+.report-section .evidence-label {{
+    color: var(--mist);
+}}
+.report-section .metric-card {{
+    background: rgba(218, 255, 251, .1);
+    border-color: rgba(100, 204, 197, .22);
+}}
+.report-section .metric-label,
+.report-section .metric-value {{
+    color: var(--mist);
+}}
+.report-section .section-copy {{
+    color: rgba(218, 255, 251, .74);
+}}
+.report-heading {{
+    align-items: flex-end;
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+    margin-bottom: 1.1rem;
+}}
+.report-heading .section-title {{ margin-bottom: 0; }}
 .disclaimer {{
+    font-family: var(--font-body);
     border-top: 1px solid var(--line);
     color: var(--ink);
-    font-size: .77rem;
+    font-size: .85rem;
     line-height: 1.5;
     margin-top: 2.5rem;
     padding-top: 1rem;
@@ -420,13 +577,40 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
 
-.stTextInput input, .stNumberInput input, .stDateInput input {{
+/* Native form controls: fixed background/text regardless of the
+   browser/OS light-dark preference, instead of inheriting Streamlit's
+   theme colours (which is what made these blend into the page). */
+.stTextInput input, .stNumberInput input, .stDateInput input,
+.stSelectbox div[data-baseweb="select"] > div {{
+    background: var(--surface) !important;
+    color: var(--surface-text) !important;
+    border: 1px solid rgba(218, 255, 251, .3) !important;
     border-radius: 10px;
+    font-family: var(--font-body);
 }}
+.stTextInput input::placeholder, .stNumberInput input::placeholder {{
+    color: rgba(218, 255, 251, .65) !important;
+}}
+.stDateInput svg, .stNumberInput svg {{ fill: var(--surface-text); }}
+
+/* Widget labels ("Patient ID", "Age", "Screening date", "Eye being
+   screened", etc.) default to a light theme colour that disappears on
+   the light mist page background — force a dark, theme-independent
+   colour instead. */
+[data-testid="stWidgetLabel"] p,
+.stRadio label p,
+.stRadio [data-testid="stMarkdownContainer"] p {{
+    font-family: var(--font-subheading);
+    color: var(--navy) !important;
+}}
+
 .stButton > button, .stDownloadButton > button {{
+    background: var(--surface) !important;
+    color: var(--surface-text) !important;
     border: 0;
     border-radius: 11px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-subheading);
+    font-size: 1.02rem;
     font-weight: 700;
     min-height: 2.8rem;
     transition: transform .18s ease, box-shadow .18s ease;
@@ -435,22 +619,37 @@ html, body, [data-testid="stAppViewContainer"] {{
     box-shadow: 0 8px 18px rgba(23, 107, 135, .18);
     transform: translateY(-1px);
 }}
+.stButton > button p, .stDownloadButton > button p {{ color: var(--surface-text) !important; }}
 .upload-card + div .stButton > button {{
-    background: var(--aqua);
-    color: var(--navy);
+    background: var(--aqua) !important;
+    color: var(--navy) !important;
 }}
-.topbar .stTextInput label, .topbar .stSelectbox label {{ color: rgba(218,255,251,.72); }}
-.topbar .stTextInput input {{ background: rgba(255,255,255,.1); color: var(--mist); border-color: rgba(218,255,251,.22); }}
-.topbar .stSelectbox div[data-baseweb="select"] > div {{ background: rgba(255,255,255,.1); color: var(--mist); border-color: rgba(218,255,251,.22); }}
-.topbar [data-testid="stWidgetLabel"] p {{ color: rgba(218,255,251,.72); }}
-
+.upload-card + div .stButton > button p {{ color: var(--navy) !important; }}
+/* Bordered native containers (e.g. the Explainability panel) also
+   default to a theme-linked colour; pin them to the same fixed
+   middle-palette surface used elsewhere. */
 [data-testid="stVerticalBlockBorderWrapper"] {{
-    color: var(--navy);
+    background: var(--surface);
+    border-radius: 22px;
+    padding: .35rem .25rem;
+    color: var(--surface-text);
 }}
 [data-testid="stVerticalBlockBorderWrapper"] p,
 [data-testid="stVerticalBlockBorderWrapper"] label,
 [data-testid="stVerticalBlockBorderWrapper"] [data-testid="stMarkdownContainer"] {{
-    color: var(--ink);
+    color: var(--surface-text) !important;
+}}
+[data-testid="stVerticalBlockBorderWrapper"] .section-label {{ color: var(--aqua) !important; }}
+[data-testid="stVerticalBlockBorderWrapper"] .section-title {{ color: var(--surface-text) !important; }}
+[data-testid="stVerticalBlockBorderWrapper"] .card,
+[data-testid="stVerticalBlockBorderWrapper"] .card p {{ color: var(--navy) !important; }}
+
+/* Ophthalmologist review report inside the expander: force a dark,
+   theme-independent colour so it stays legible on the light background. */
+[data-testid="stExpanderDetails"],
+[data-testid="stExpanderDetails"] * {{
+    color: var(--navy) !important;
+    font-family: var(--font-body);
 }}
 [data-testid="stExpander"] p,
 [data-testid="stExpander"] [data-testid="stMarkdownContainer"],
@@ -459,28 +658,19 @@ html, body, [data-testid="stAppViewContainer"] {{
 }}
 
 @media (max-width: 700px) {{
-    [data-testid="stMainBlockContainer"] {{ padding: .75rem .75rem 3rem; }}
-    .topbar {{ border-radius: 14px; padding: .8rem; }}
-    .eye-layer {{ right: -24vw; top: 18vh; width: 100vw; opacity: .07; }}
-    .hero-title {{ font-size: 2.55rem; }}
+    [data-testid="stMainBlockContainer"] {{ padding: 0 .75rem 3rem; }}
+    .st-key-floating-controls {{ right: .55rem; top: .55rem; width: 190px; }}
+    .hero-panel {{ min-height: 100vh; margin-left: -.75rem; margin-right: -.75rem; padding: 2rem 1.15rem; }}
+    .hero-panel::after {{ right: -38vw; top: 28%; width: 120vw; height: 120vw; opacity: .55; }}
+    .hero-content {{ max-width: 92vw; }}
+    .hero-brand {{ font-size: 2.2rem; }}
+    .hero-panel .hero-title {{ font-size: 1.65rem; }}
+    .report-heading {{ align-items: flex-start; flex-direction: column; }}
     .result-hero {{ border-radius: 18px; }}
 }}
 </style>
 """
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-
-
-def _render_background() -> None:
-    st.markdown(
-        f"""
-        <div class="eye-background" aria-hidden="true">
-            <div class="eye-layer one"></div>
-            <div class="eye-layer two"></div>
-            <div class="eye-layer three"></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 
 def _rl_image_from_array(image_array: np.ndarray, width_pt: float):
@@ -645,7 +835,7 @@ def build_pdf_report(
     return buffer.getvalue()
 
 
-@st.cache_resource(show_spinner="Loading the screening model...")
+@st.cache_resource(show_spinner=False)
 def load_model():
     if not os.path.exists(MODEL_PATH):
         return None
@@ -761,12 +951,15 @@ def _recommendation_copy(recommendation: str, failure_reason: str | None = None)
     return "Image recapture required", get_recapture_message(failure_reason)
 
 
-def _metric_card(label: str, value: str) -> None:
-    st.markdown(
+def _metric_card_html(label: str, value: str) -> str:
+    return (
         f'<div class="metric-card"><div class="metric-label">{html.escape(label)}</div>'
-        f'<div class="metric-value">{html.escape(value)}</div></div>',
-        unsafe_allow_html=True,
+        f'<div class="metric-value">{html.escape(value)}</div></div>'
     )
+
+
+def _metric_card(label: str, value: str) -> None:
+    st.markdown(_metric_card_html(label, value), unsafe_allow_html=True)
 
 
 def _reset_analysis(*, clear_upload: bool = False) -> None:
@@ -803,8 +996,6 @@ def _render_menu_content(menu_choice: str) -> None:
         st.info(f"**{title}**\n\n{copy}")
 
 
-_render_background()
-
 for key, default in {
     "uploader_version": 0,
     "selected_file_id": None,
@@ -819,51 +1010,48 @@ for key, default in {
 }.items():
     st.session_state.setdefault(key, default)
 
-
-with st.container():
-    nav_col, menu_col, email_col = st.columns([2.1, 1.25, 1.7], vertical_alignment="center")
-    with nav_col:
-        st.markdown(
-            '<div class="brand-wrap"><div class="brand-mark">OCULUS <span>AI</span></div>'
-            '<div class="brand-subtitle">DIABETIC RETINOPATHY SCREENING</div></div>',
-            unsafe_allow_html=True,
-        )
-    with menu_col:
-        menu_choice = st.selectbox(
-            "Menu",
-            ["Menu", "About us", "Explore our model", "Our codebase", "References"],
-            key="menu_choice",
-            label_visibility="collapsed",
-        )
-    with email_col:
-        st.text_input(
-            "Report email",
-            placeholder="Receiver email",
-            key="receiver_email",
-            label_visibility="collapsed",
-        )
-
-_render_menu_content(menu_choice)
-
-st.markdown('<div class="hero-kicker">Rural PHC screening support</div>', unsafe_allow_html=True)
 st.markdown(
-    '<h1 class="hero-title">A clearer view of retinal health.</h1>',
-    unsafe_allow_html=True,
-)
-st.markdown(
+    '<section class="hero-panel"><div class="hero-content">'
+    '<div class="hero-brand">OCULUS <span>AI</span></div>'
+    '<div class="hero-chip">RETINAL SCREENING</div>'
+    '<div class="hero-kicker">Rural PHC screening support</div>'
+    '<h1 class="hero-title" style="font-family: var(--font-heading), serif;">A clearer view of retinal health.</h1>'
     '<p class="hero-copy">AI-assisted retinal screening for early detection and referral — '
-    "designed for confident decisions when specialist access is limited.</p>",
-    unsafe_allow_html=True,
-)
-st.markdown(
+    "designed for confident decisions when specialist access is limited.</p>"
     '<div class="fact-carousel">'
     "<span>Regular screening can help identify changes before vision is affected.</span>"
     "<span>Good image quality helps the screening model make a safer assessment.</span>"
     "<span>Diabetic retinopathy can progress without noticeable symptoms.</span>"
     "<span>Every result is referral support, not a final diagnosis.</span>"
-    "</div>",
+    "</div></div></section>",
     unsafe_allow_html=True,
 )
+
+st.markdown(
+    '<section class="about-section">'
+    '<div class="section-label">About the platform</div>'
+    '<h2 class="section-title" style="font-family: var(--font-heading), serif;">About OCULUS AI</h2>'
+    '<p class="section-copy">OCULUS AI is a screening and referral-support prototype designed to help '
+    'PHC teams make faster, clearer decisions with retinal images. It supports clinical review; it does not '
+    'replace an ophthalmologist.</p></section>',
+    unsafe_allow_html=True,
+)
+
+with st.container(key="floating-controls"):
+    st.text_input(
+        "Report email",
+        placeholder="Receiver email",
+        key="receiver_email",
+        label_visibility="collapsed",
+    )
+    menu_choice = st.selectbox(
+        "☰",
+        ["☰", "About us", "Explore our model", "Our codebase", "References"],
+        key="menu_choice",
+        label_visibility="collapsed",
+    )
+
+_render_menu_content(menu_choice)
 
 model = load_model()
 if model is None:
@@ -874,7 +1062,7 @@ input_col, details_col = st.columns([1.18, 0.82], gap="large")
 
 with input_col:
     st.markdown('<div class="section-label">Step 01 · Image input</div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-title">Upload a retinal image</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-title" style="font-family: var(--font-heading), serif;">Upload a retinal image</h2>', unsafe_allow_html=True)
     st.markdown(
         '<p class="section-copy">Use a clear, centered fundus photograph. '
         "The image will be checked before any DR prediction is made.</p>",
@@ -969,7 +1157,7 @@ with input_col:
 
 with details_col:
     st.markdown('<div class="section-label">Step 02 · Screening information</div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-title">Patient context</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-title" style="font-family: var(--font-heading), serif;">Patient context</h2>', unsafe_allow_html=True)
     st.markdown(
         '<p class="section-copy">Use the minimum information needed to identify this screening case.</p>',
         unsafe_allow_html=True,
@@ -983,7 +1171,7 @@ with details_col:
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown(
             '<div class="card"><div class="section-label">Ready when you are</div>'
-            '<h2 class="section-title">Start with one image</h2>'
+            '<h2 class="section-title" style="font-family: var(--font-subheading), serif;">Start with one image</h2>'
             '<p class="section-copy">Upload a fundus image on the left. The analysis button will appear after the image is ready.</p></div>',
             unsafe_allow_html=True,
         )
@@ -1021,13 +1209,16 @@ if result is not None and analysis_image is not None:
             unsafe_allow_html=True,
         )
     with hero_right:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        _metric_card("Risk category", risk)
-        st.markdown("<br>", unsafe_allow_html=True)
-        _metric_card("Image quality", f"{quality['score']}/100")
-        st.markdown("<br>", unsafe_allow_html=True)
-        _metric_card("Uncertainty", str(unc.get("uncertainty_level") or "N/A").title())
-        st.markdown("</div>", unsafe_allow_html=True)
+        hero_metrics_html = "".join(
+            [
+                _metric_card_html("Risk category", risk),
+                _metric_card_html("Image quality", f"{quality['score']}/100"),
+                _metric_card_html(
+                    "Uncertainty", str(unc.get("uncertainty_level") or "N/A").title()
+                ),
+            ]
+        )
+        st.markdown(f'<div class="card">{hero_metrics_html}</div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     rec_class = "" if recommendation == "routine" else recommendation
@@ -1045,7 +1236,7 @@ if result is not None and analysis_image is not None:
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown('<div class="section-label">Quality and evidence</div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-title">See what the system saw</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-title" style="font-family: var(--font-heading), serif;">See what the system saw</h2>', unsafe_allow_html=True)
     image_col1, image_col2, image_col3 = st.columns(3, gap="medium")
     evidence = [
         (image_col1, "Original image", analysis_image),
@@ -1060,7 +1251,7 @@ if result is not None and analysis_image is not None:
     st.markdown("<br>", unsafe_allow_html=True)
     with st.container(border=True):
         st.markdown('<div class="section-label">Explainability</div>', unsafe_allow_html=True)
-        st.markdown('<h2 class="section-title">Why did the AI make this prediction?</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-title" style="font-family: var(--font-heading), serif;">Why did the AI make this prediction?</h2>', unsafe_allow_html=True)
         st.markdown(
             '<p class="section-copy">Highlighted regions indicate areas that contributed to the AI prediction. '
             "They are visual aids for review, not standalone clinical evidence.</p>",
@@ -1088,8 +1279,17 @@ if result is not None and analysis_image is not None:
     )
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown('<div class="section-label">Results summary</div>', unsafe_allow_html=True)
-    st.markdown('<h2 class="section-title">Case summary</h2>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="report-section"><div class="report-heading">'
+        f'<div><div class="section-label">Final report</div>'
+        f'<h2 class="section-title" style="font-family: var(--font-subheading), serif;">'
+        f'Screening handoff</h2></div>'
+        f'<div class="hero-chip">{html.escape(recommendation.upper())}</div>'
+        f'</div><p class="section-copy">A compact view of the case for the next clinical decision. '
+        f'Use the downloadable PDF for the complete report.</p></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("<br>", unsafe_allow_html=True)
     summary_left, summary_right = st.columns([.9, 1.6], gap="large")
     with summary_left:
         _metric_card("Patient ID", analysis_patient.get("patient_id") or "Not provided")
