@@ -7,11 +7,9 @@ recommendations. This module owns the presentation layer and report delivery.
 """
 import base64
 import html
-import json
 import os
 import re
 import smtplib
-import subprocess
 import sys
 import time
 import urllib.parse
@@ -658,6 +656,9 @@ def _is_valid_email(value: str) -> bool:
     return bool(re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", value.strip()))
 
 
+GMAIL_SENDER = "b.charan202006@gmail.com"
+
+
 def _send_pdf_email(
     recipient: str,
     pdf_bytes: bytes,
@@ -666,122 +667,53 @@ def _send_pdf_email(
     image_name: str,
 ) -> tuple[bool | None, str]:
     """
-    Send through configured SMTP or the attached Resend connector.
+    Send the PDF report via Gmail SMTP_SSL, straight from the sender
+    account below. Requires a Gmail App Password (NOT the account's normal
+    login password) in the GMAIL_APP_PASSWORD environment variable —
+    never hardcode a real password here, since this file is committed to
+    git and a hardcoded secret would be permanently in the repo history.
 
-    SMTP values are read only by the running app. When SMTP_HOST is absent,
-    the Resend connector bridge uses Replit-managed authentication instead of
-    requiring a provider API key in the app. If neither path is configured,
-    return a clear fallback state instead of pretending delivery happened.
+    To generate an App Password: the Google Account needs 2-Step
+    Verification enabled, then create one at
+    https://myaccount.google.com/apppasswords
     """
     recipient = recipient.strip()
     if not _is_valid_email(recipient):
         return False, "Enter a valid recipient email address."
 
-    host = os.getenv("SMTP_HOST", "").strip()
-    sender = os.getenv("SMTP_FROM", "").strip()
-    if not host and not sender:
-        return None, "Email service is not configured. Download the PDF and use the email client link below."
-
-    if not host:
-        return _send_pdf_via_resend(
-            recipient,
-            pdf_bytes,
-            sender=sender,
-            patient_id=patient_id,
-            image_name=image_name,
+    app_password = os.getenv("GMAIL_APP_PASSWORD", "").strip()
+    if not app_password:
+        return None, (
+            "Email sending is not configured. Set the GMAIL_APP_PASSWORD "
+            "environment variable to enable automatic email delivery."
         )
+
+    message = EmailMessage()
+    message["Subject"] = f"OCULUS AI screening report — {patient_id or image_name}"
+    message["From"] = GMAIL_SENDER
+    message["To"] = recipient
+    message.set_content(
+        "Hello,\n\n"
+        "Attached is the OCULUS AI diabetic retinopathy screening report, "
+        "generated automatically after this screening.\n\n"
+        "This screening output requires ophthalmologist confirmation before "
+        "any clinical decision is made.\n\n"
+        "Regards,\nOCULUS AI"
+    )
+    message.add_attachment(
+        pdf_bytes,
+        maintype="application",
+        subtype="pdf",
+        filename="oculus-ai-screening-report.pdf",
+    )
 
     try:
-        port = int(os.getenv("SMTP_PORT", "587"))
-        username = os.getenv("SMTP_USERNAME", "").strip()
-        password = os.getenv("SMTP_PASSWORD", "")
-        smtp_sender = sender or username
-        if not smtp_sender:
-            return False, "Email service is missing a sender address."
-
-        message = EmailMessage()
-        message["Subject"] = f"OCULUS AI screening report — {patient_id or image_name}"
-        message["From"] = smtp_sender
-        message["To"] = recipient
-        message.set_content(
-            "Attached is the OCULUS AI diabetic retinopathy screening report. "
-            "This screening output requires ophthalmologist confirmation."
-        )
-        message.add_attachment(
-            pdf_bytes,
-            maintype="application",
-            subtype="pdf",
-            filename="oculus-ai-screening-report.pdf",
-        )
-
-        with smtplib.SMTP(host, port, timeout=15) as smtp:
-            if os.getenv("SMTP_USE_TLS", "true").lower() not in {"0", "false", "no"}:
-                smtp.starttls()
-            if username:
-                smtp.login(username, password)
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as smtp:
+            smtp.login(GMAIL_SENDER, app_password)
             smtp.send_message(message)
         return True, f"Report sent to {recipient}."
-    except (OSError, smtplib.SMTPException, ValueError) as exc:
+    except (smtplib.SMTPException, OSError) as exc:
         return False, f"Report could not be sent: {exc}"
-
-
-def _send_pdf_via_resend(
-    recipient: str,
-    pdf_bytes: bytes,
-    *,
-    sender: str,
-    patient_id: str,
-    image_name: str,
-) -> tuple[bool, str]:
-    """Send a PDF through the Replit-managed Resend connector."""
-    payload = {
-        "from": sender,
-        "to": [recipient],
-        "subject": f"OCULUS AI screening report — {patient_id or image_name}",
-        "text": (
-            "Attached is the OCULUS AI diabetic retinopathy screening report. "
-            "This screening output requires ophthalmologist confirmation."
-        ),
-        "attachments": [
-            {
-                "filename": "oculus-ai-screening-report.pdf",
-                "content": base64.b64encode(pdf_bytes).decode("ascii"),
-            }
-        ],
-    }
-
-    try:
-        completed = subprocess.run(
-            ["node", os.path.join(PROJECT_ROOT, "scripts", "send_resend_email.cjs")],
-            input=json.dumps(payload),
-            capture_output=True,
-            text=True,
-            timeout=30,
-            cwd=PROJECT_ROOT,
-            check=False,
-        )
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        return False, f"Report could not be sent: {exc}"
-
-    if completed.returncode != 0:
-        detail = completed.stderr.strip() or "The Resend connector could not process the request."
-        return False, f"Report could not be sent: {detail}"
-
-    try:
-        response = json.loads(completed.stdout)
-    except json.JSONDecodeError:
-        return False, "Report could not be sent: the Resend connector returned an invalid response."
-
-    if response.get("ok") is True:
-        return True, f"Report sent to {recipient}."
-
-    error_body = response.get("body")
-    if isinstance(error_body, dict):
-        detail = error_body.get("message") or error_body.get("error")
-    else:
-        detail = None
-    detail = detail or f"Resend returned HTTP {response.get('status', 'unknown')}."
-    return False, f"Report could not be sent: {detail}"
 
 
 def _mailto_link(recipient: str, result: dict) -> str:
