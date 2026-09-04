@@ -39,3 +39,7 @@ externalPort = 80
 
 [userenv.shared]
 SMTP_FROM = "onboarding@resend.dev"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 180000
