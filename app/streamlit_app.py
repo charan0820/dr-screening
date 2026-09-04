@@ -484,7 +484,7 @@ html, body, [data-testid="stAppViewContainer"] {{
     margin-top: .4rem;
 }}
 .st-key-floating-controls [data-testid="stSelectbox"] [data-baseweb="select"] {{
-    width: 64px;
+    width: 160px;
 }}
 .st-key-floating-controls [data-testid="stSelectbox"] [data-baseweb="select"] > div {{
     min-height: 42px;
@@ -986,28 +986,119 @@ def _reset_analysis(*, clear_upload: bool = False) -> None:
         st.session_state["uploader_version"] += 1
 
 
+GRAPH_ASSETS = (
+    ("quality_score_distribution.png", "Quality score distribution across a real image subsample."),
+    ("confusion_matrix.png", "DR grade confusion matrix on the held-out test set."),
+    ("per_class_f1.png", "Per-class F1 score on the held-out test set."),
+)
+
+
 def _render_menu_content(menu_choice: str) -> None:
-    content = {
-        "About us": (
-            "About OCULUS AI",
-            "A screening and referral-support prototype designed to help PHC teams make faster, clearer decisions with retinal images.",
-        ),
-        "Explore our model": (
-            "Explore our model",
-            "The existing workflow assesses image quality, enhances suitable images, classifies five DR grades, estimates uncertainty, and provides visual evidence for clinical review.",
-        ),
-        "Our codebase": (
-            "Our codebase",
-            "This project keeps the model and clinical logic separate from the Streamlit interface so the screening workflow remains inspectable.",
-        ),
-        "References": (
-            "References",
-            "The prototype uses the APTOS 2019 Blindness Detection dataset and includes a clear clinical-validation disclaimer.",
-        ),
-    }
-    if menu_choice in content:
-        title, copy = content[menu_choice]
-        st.info(f"**{title}**\n\n{copy}")
+    if menu_choice == "About us":
+        st.info(
+            "**About us**\n\n"
+            "Get to know the team:\n\n"
+            "**Our leader : 1602-24-733-091 : M Nanith Reddy**\n\n"
+            "1602-24-733-070 : S Bhuvaneshwar\n\n"
+            "1602-24-733-072 : B Charan\n\n"
+            "1602-24-733-102 : T Sahasra Reddy\n\n"
+            "1602-24-733-105 : D Sai Rushitha\n\n"
+            "1602-24-733-126 : Vasundhara Devi"
+        )
+
+    elif menu_choice == "Explore our model":
+        with st.container(border=True):
+            st.markdown("**Explore our model**")
+
+            st.markdown("Data pipeline")
+            st.markdown(
+                "Images are loaded from CSV metadata into a labeled DataFrame, then split "
+                "into stratified train / validation (15%) / test (15%) sets (seed 42). "
+                "Training images pass through an augmentation pipeline before being fed "
+                "to the model; quality scoring and CLAHE-based enhancement run ahead of "
+                "inference."
+            )
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("Graphs")
+            for filename, caption in GRAPH_ASSETS:
+                path = os.path.join(ASSET_DIR, filename)
+                if os.path.exists(path):
+                    st.image(path, caption=caption, width="stretch")
+                else:
+                    st.caption(f"({caption} — asset not found: {filename})")
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("Accuracy measure")
+            st.markdown(
+                "On the held-out test set (150 images) the model reaches **78.7% overall "
+                "accuracy** (118/150 correct) with a **macro F1 of 0.66**. Per-class F1 "
+                "ranges from 0.97 on No DR down to 0.47 on Mild. The confusion matrix shows "
+                "the model separates healthy eyes cleanly, while Mild and Moderate grades "
+                "are most often confused with each other."
+            )
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("Details of the model")
+            st.markdown(
+                "A 5-class EfficientNet-B0 backbone (`build_model(num_classes=5, "
+                "backbone='efficientnet_b0')`) is trained for up to 15 epochs. Evaluation "
+                "reports accuracy, macro F1, quadratic-weighted kappa (QWK), and a full "
+                "confusion matrix. Inference (`predict`) returns a DR grade (0–4), a "
+                "referable flag, and softmax class probabilities; each prediction is paired "
+                "with Grad-CAM explainability and Monte-Carlo dropout uncertainty "
+                "estimation."
+            )
+
+    elif menu_choice == "Our codebase":
+        with st.container(border=True):
+            st.markdown("**Our codebase**")
+            st.markdown(
+                "GitHub: [github.com/charan0820/dr-screening]"
+                "(https://github.com/charan0820/dr-screening.git)"
+            )
+
+            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("Folder structure")
+            st.code(
+                "dr-screening/\n"
+                "├── main.py\n"
+                "├── CONTRACTS.md\n"
+                "├── models/\n"
+                "│   └── best_checkpoint.keras\n"
+                "├── app/\n"
+                "│   └── streamlit_app.py\n"
+                "└── src/\n"
+                "    ├── data_pipeline.py\n"
+                "    ├── quality.py\n"
+                "    ├── enhancement.py\n"
+                "    ├── model.py\n"
+                "    ├── train.py\n"
+                "    ├── gradcam.py\n"
+                "    ├── uncertainty.py\n"
+                "    ├── lesion_overlay.py\n"
+                "    └── report_generator.py",
+                language="text",
+            )
+
+            st.markdown("<br>", unsafe_allow_html=True)
+
+    elif menu_choice == "References":
+        st.info(
+            "**References**\n\n"
+            "- N. Tsiknakis et al. — Deep learning for diabetic retinopathy detection and classification "
+            "based on fundus images: A review — *Computers in Biology and Medicine* (2021)\n\n"
+            "- S. Das et al. — Deep learning architecture based on segmented fundus image features for "
+            "classification of diabetic retinopathy — *Biomedical Signal Processing and Control* (2021)\n\n"
+            "- W.L. Alyoubi et al. — Diabetic retinopathy fundus image classification and lesions "
+            "localization system using deep learning — *Sensors* (2021)\n\n"
+            "- H. Safi et al. — Early detection of diabetic retinopathy — *Survey of Ophthalmology* (2018)\n\n"
+            "- [APTOS 2019 Blindness Detection](https://www.kaggle.com/c/aptos2019-blindness-detection)\n\n"
+            "- [IDRiD (Indian Diabetic Retinopathy Image Dataset)]"
+            "(https://ieeedataport.org/open-access/indian-diabetic-retinopathy-image-dataset-idrid)\n\n"
+            "- [DRIVE (Vessel Extraction)](https://drive.grand-challenge.org/)\n\n"
+            "- [Messidor-2](https://www.adcis.net/en/third-party/messidor2/)"
+        )
 
 
 for key, default in {
