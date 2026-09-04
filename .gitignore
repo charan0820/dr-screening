@@ -6,3 +6,4 @@ env/
 .venv/
 .idea/
 data/
+node_modules/

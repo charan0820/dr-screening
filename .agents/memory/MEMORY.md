@@ -1,0 +1,3 @@
+- [Streamlit layout containers](streamlit-layout.md) — native widgets cannot be visually wrapped by separate HTML open/close markdown blocks.
+- [Resend connector](resend-connector.md) — this app uses the Node SDK bridge because the Python package is unavailable in the workspace index.
+- [Post-merge setup](post-merge-hooks.md) — configure a fast non-interactive script in `.replit` so merged tasks reinstall locked dependencies safely.
