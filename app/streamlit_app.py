@@ -10,11 +10,13 @@ import html
 import json
 import os
 import re
-import sys
+import smtplib
 import subprocess
+import sys
 import time
 import urllib.parse
 from datetime import date
+from email.message import EmailMessage
 from io import BytesIO
 
 import numpy as np
@@ -650,55 +652,122 @@ def _send_pdf_email(
     image_name: str,
 ) -> tuple[bool | None, str]:
     """
-    Send through the connected Resend integration.
+    Send through configured SMTP or the attached Resend connector.
 
-    The Node bridge uses the Replit Connectors SDK, which injects the
-    connected credential server-side. The PDF is supplied only on stdin and
-    never written to disk.
+    SMTP values are read only by the running app. When SMTP_HOST is absent,
+    the Resend connector bridge uses Replit-managed authentication instead of
+    requiring a provider API key in the app. If neither path is configured,
+    return a clear fallback state instead of pretending delivery happened.
     """
     recipient = recipient.strip()
     if not _is_valid_email(recipient):
         return False, "Enter a valid recipient email address."
 
-    sender = os.getenv("RESEND_FROM_EMAIL", "").strip()
-    if not sender:
-        return None, "Email delivery needs a verified RESEND_FROM_EMAIL sender address."
+    host = os.getenv("SMTP_HOST", "").strip()
+    sender = os.getenv("SMTP_FROM", "").strip()
+    if not host and not sender:
+        return None, "Email service is not configured. Download the PDF and use the email client link below."
 
+    if not host:
+        return _send_pdf_via_resend(
+            recipient,
+            pdf_bytes,
+            sender=sender,
+            patient_id=patient_id,
+            image_name=image_name,
+        )
+
+    try:
+        port = int(os.getenv("SMTP_PORT", "587"))
+        username = os.getenv("SMTP_USERNAME", "").strip()
+        password = os.getenv("SMTP_PASSWORD", "")
+        smtp_sender = sender or username
+        if not smtp_sender:
+            return False, "Email service is missing a sender address."
+
+        message = EmailMessage()
+        message["Subject"] = f"OCULUS AI screening report — {patient_id or image_name}"
+        message["From"] = smtp_sender
+        message["To"] = recipient
+        message.set_content(
+            "Attached is the OCULUS AI diabetic retinopathy screening report. "
+            "This screening output requires ophthalmologist confirmation."
+        )
+        message.add_attachment(
+            pdf_bytes,
+            maintype="application",
+            subtype="pdf",
+            filename="oculus-ai-screening-report.pdf",
+        )
+
+        with smtplib.SMTP(host, port, timeout=15) as smtp:
+            if os.getenv("SMTP_USE_TLS", "true").lower() not in {"0", "false", "no"}:
+                smtp.starttls()
+            if username:
+                smtp.login(username, password)
+            smtp.send_message(message)
+        return True, f"Report sent to {recipient}."
+    except (OSError, smtplib.SMTPException, ValueError) as exc:
+        return False, f"Report could not be sent: {exc}"
+
+
+def _send_pdf_via_resend(
+    recipient: str,
+    pdf_bytes: bytes,
+    *,
+    sender: str,
+    patient_id: str,
+    image_name: str,
+) -> tuple[bool, str]:
+    """Send a PDF through the Replit-managed Resend connector."""
     payload = {
         "from": sender,
-        "to": recipient,
+        "to": [recipient],
         "subject": f"OCULUS AI screening report — {patient_id or image_name}",
         "text": (
-            "Attached is the OCULUS AI diabetic retinopathy screening report.\n\n"
+            "Attached is the OCULUS AI diabetic retinopathy screening report. "
             "This screening output requires ophthalmologist confirmation."
         ),
-        "filename": "oculus-ai-screening-report.pdf",
-        "pdf_base64": base64.b64encode(pdf_bytes).decode("ascii"),
+        "attachments": [
+            {
+                "filename": "oculus-ai-screening-report.pdf",
+                "content": base64.b64encode(pdf_bytes).decode("ascii"),
+            }
+        ],
     }
-    bridge = os.path.join(PROJECT_ROOT, "scripts", "send_resend_email.cjs")
 
     try:
         completed = subprocess.run(
-            ["node", bridge],
+            ["node", os.path.join(PROJECT_ROOT, "scripts", "send_resend_email.cjs")],
             input=json.dumps(payload),
-            text=True,
             capture_output=True,
-            cwd=PROJECT_ROOT,
+            text=True,
             timeout=30,
+            cwd=PROJECT_ROOT,
             check=False,
         )
-        if completed.returncode == 0:
-            response = json.loads(completed.stdout or "{}")
-            if response.get("ok"):
-                return True, f"Report sent to {recipient}."
-        error_text = (completed.stderr or completed.stdout or "").strip()
-        try:
-            error_text = json.loads(error_text).get("message", error_text)
-        except json.JSONDecodeError:
-            pass
-        return False, f"Report could not be sent: {error_text or 'Resend returned an unknown error.'}"
-    except (OSError, subprocess.TimeoutExpired, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, subprocess.TimeoutExpired) as exc:
         return False, f"Report could not be sent: {exc}"
+
+    if completed.returncode != 0:
+        detail = completed.stderr.strip() or "The Resend connector could not process the request."
+        return False, f"Report could not be sent: {detail}"
+
+    try:
+        response = json.loads(completed.stdout)
+    except json.JSONDecodeError:
+        return False, "Report could not be sent: the Resend connector returned an invalid response."
+
+    if response.get("ok") is True:
+        return True, f"Report sent to {recipient}."
+
+    error_body = response.get("body")
+    if isinstance(error_body, dict):
+        detail = error_body.get("message") or error_body.get("error")
+    else:
+        detail = None
+    detail = detail or f"Resend returned HTTP {response.get('status', 'unknown')}."
+    return False, f"Report could not be sent: {detail}"
 
 
 def _mailto_link(recipient: str, result: dict) -> str:
